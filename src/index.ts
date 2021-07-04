@@ -1,6 +1,7 @@
-import Discord from "discord.js";
 import "dotenv/config";
+import Discord from "discord.js";
 import Command from "./command_handler";
+import { Emitter } from "./event_handler";
 
 const client = new Discord.Client(),
   config = {
@@ -9,19 +10,27 @@ const client = new Discord.Client(),
   };
 
 client.on("ready", () => {
-  console.log(`Logget in as ${client.user?.tag}`);
+  console.log(`Logged in as ${client.user?.tag}`);
 });
 
-const commands = ["play", "ping"];
+const commands = ["play", "skip", "fs", "stop"];
+
+Emitter.on("error", (data) => {
+  data.channel.send(data.message);
+});
 
 client.on("message", (message) => {
-  const msg = message.content;
+  let [command, ...args] = message.content
+    .substring(config.prefix.length)
+    .split(" ");
 
-  const args = message.content.substring(config.prefix.length).split(" ");
+  if (!commands.includes(command)) return;
 
-  if (!commands.includes(args[0])) return;
-
-  Command.handle(args[0], args[1], message);
+  Command.handle(
+    command,
+    args.toString().split(",").join(" ").toString(),
+    message
+  );
 
   // const command = commands.find((command, index) => {
   //   const cmd = message.content.includes(`.${command}`);

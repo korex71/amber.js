@@ -13,36 +13,27 @@ client.on("ready", () => {
   console.log(`Logged in as ${client.user?.tag}`);
 });
 
-const commands = ["play", "skip", "fs", "stop"];
-
-Emitter.on("error", (data) => {
-  data.channel.send(data.message);
-});
+const commands = ["play", "skip", "fs", "stop", "queue", "pl"];
 
 client.on("message", (message) => {
+  if (!isNaN(Number(message.content))) {
+    const int = Number(message.content);
+    if (int < 0 || int > 20) return;
+
+    Emitter.emit("search-instance", {
+      data: { selected: int, userId: message.author.id },
+    });
+
+    return;
+  }
+
   let [command, ...args] = message.content
     .substring(config.prefix.length)
     .split(" ");
 
   if (!commands.includes(command)) return;
 
-  Command.handle(
-    command,
-    args.toString().split(",").join(" ").toString(),
-    message
-  );
-
-  // const command = commands.find((command, index) => {
-  //   const cmd = message.content.includes(`.${command}`);
-  // });
-
-  // if (command) {
-  //   console.log(command);
-  //   message.createdTimestamp - new Date().getTime();
-
-  //   let parameters = msg.slice(command.length);
-  //   return Command.handle(command, parameters);
-  // }
+  Command.handle(command, args.join(" "), message);
 });
 
 client.login(config.token);

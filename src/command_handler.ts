@@ -3,15 +3,21 @@ import { config } from "./";
 import ytdl from "ytdl-core-discord";
 import ytsr from "ytsr";
 import ytmusic from "node-youtube-music";
-import { CreateResultsEmbed } from "./helpers/message_templates";
+import {
+  CreateQueueEmbed,
+  CreateResultsEmbed,
+} from "./helpers/message_templates";
 import { Emitter } from "./event_handler";
+import { MusicVideo } from "node-youtube-music/dist/src/models";
+import { searchSongs } from "./helpers/getVideos";
+import { createInstance } from "./helpers/searchInstance";
+import { ISong } from "./helpers/ITypes";
+import playlist_manager from "./helpers/playlist_manager";
 
-type ISong = {
-  title?: string;
-  url: string;
-  artist?: string;
-};
-
+interface ISearchItems extends ytsr.Video {}
+interface IResults extends ytsr.Result {
+  items: ytsr.Video[];
+}
 class Handler {
   queue = new Map();
   options = new Map();
@@ -51,6 +57,7 @@ class Handler {
       const info = await ytdl.getBasicInfo(query);
 
       song = {
+        id: info.videoDetails.videoId,
         title: info.videoDetails.title,
         url: info.videoDetails.video_url,
         artist: info.videoDetails.media.artist || info.videoDetails.author.name,
@@ -58,31 +65,52 @@ class Handler {
 
       message.reply(`Música encontrada: ${info.videoDetails.title}`);
 
-      message.delete();
+      return message.delete();
+    } else {
+      const userId = message.author.id;
+      const results = await searchSongs(query);
+      const embed = CreateResultsEmbed(results, message, query);
+      const botMessage = await message.channel.send(embed);
+      createInstance(results, userId, message, botMessage);
     }
-    // // const searchResults = await ytsr(query, {limit: 10});
-    // const uri = "https://www.youtube.com/watch?v=" + search[0].youtubeId;
+    return;
+    let search = await ytmusic.searchMusics(query);
 
-    // message.reply(
-    //   `Música encontrada: ${search[0].title} de ${search[0].artist}`
-    // );
+    if (!search || !search.length) {
+      console.log("Song from normal youtube");
 
-    // return connection.play(await ytdl(uri), {
-    //   type: "opus",
-    // });
+      let { items, ...rest } = await ytsr(query);
 
-    // const embed = CreateResultsEmbed(search, message, query);
+      let parsed = items.map((item): MusicVideo => {
+        return {
+          youtubeId: item.id,
+          title: item.title,
+          album: "",
+          artist: item.author?.name || "",
+          duration: {
+            label: item.duration || "",
+            totalSeconds: 0,
+          },
+          thumbnailUrl: "",
+        };
+      });
 
-    // message.reply(embed);
-
-    const search = await ytmusic.searchMusics(query);
+      search = parsed;
+    }
 
     if (!search.length)
-      return Emitter.emit("error", { channel: message.channel });
+      return Emitter.emit("error", { data: { channel: message.channel } });
 
     const uri = "https://www.youtube.com/watch?v=" + search[0].youtubeId;
 
-    song = { title: search[0].title, url: uri, artist: search[0].artist };
+    song = {
+      id: search[0].youtubeId || "",
+      title: search[0].title,
+      url: uri,
+      artist: search[0].artist,
+    };
+
+    return playlist_manager.addSong(song, message);
 
     if (!server_queue) {
       const queue_constructor = {
@@ -101,16 +129,19 @@ class Handler {
 
         this.executePlay(message, queue_constructor.songs[0]);
       } catch (error) {
-        Emitter.emit("error", { channel: message.channel });
+        Emitter.emit("error", {
+          message: `Não foi possível tocar ${
+            queue_constructor.songs[0].title || "uma música."
+          }`,
+          data: { channel: message.channel },
+        });
         console.warn(error.message);
       }
     } else {
       if (!server_queue.songs.length) {
         server_queue.songs.push(song);
         this.executePlay(message, server_queue.songs[0]);
-        return message.channel.send(
-          `Tocando **${song.title} - ${song.artist}**`
-        );
+        return;
       } else {
         server_queue.songs.push(song);
         return message.channel.send(
@@ -152,7 +183,7 @@ class Handler {
   }
 
   skip(message: Message) {
-    if (message.member && !message.member.voice.channel)
+    if (this.isUserOutVoiceChannel(message))
       return message.reply(
         "Você precisa estar conectado a um canal de voz para isso."
       );
@@ -167,7 +198,7 @@ class Handler {
   }
 
   stop(message: Message) {
-    if (message.member && !message.member.voice.channel)
+    if (this.isUserOutVoiceChannel(message))
       return message.reply(
         "Você precisa estar conectado a um canal de voz para isso."
       );
@@ -179,7 +210,7 @@ class Handler {
   }
 
   async playlist(message: Message) {
-    if (message.member && !message.member.voice.channel)
+    if (this.isUserOutVoiceChannel(message))
       return message.reply(
         "Você precisa estar conectado a um canal de voz para isso."
       );
@@ -190,14 +221,16 @@ class Handler {
       return message.reply("A Playlist está vazia.");
     }
 
-    await message.reply(
-      server_queue.songs.map(
-        (item: ISong, index: number) => `[${index}] ${item.title}\n`
-      )
-    );
+    const embed = CreateQueueEmbed(server_queue.songs);
+
+    await message.reply(embed);
   }
 
   searchHandleExecute() {}
+
+  isUserOutVoiceChannel(message: Message) {
+    return !message.member?.voice.channel;
+  }
 }
 
 export default new Handler();

@@ -16,3 +16,15 @@ export const CreateResultsEmbed = (
       })
     );
 };
+
+export const CreateQueueEmbed = (queue: any[]) => {
+  return new MessageEmbed()
+    .setColor("#42fcff")
+    .setTitle("Playlist")
+    .setTimestamp()
+    .addFields(
+      queue.map((item: any, index: number) => {
+        return { name: index, value: item.title, inline: false };
+      })
+    );
+};

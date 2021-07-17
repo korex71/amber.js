@@ -33,7 +33,7 @@ class Handler {
       if (message.member && message.member.voice.channel) {
         const voice_channel = message.member.voice.channel;
 
-        await this.play(parameters, message, voice_channel);
+        await this.play(parameters, message);
       } else {
         message.reply(
           "Você precisa estar conectado a um canal de voz para isso."
@@ -41,14 +41,13 @@ class Handler {
       }
     }
 
-    if (command === "skip" || command === "fs") await this.skip(message);
+    if (command === "skip" || command === "fs")
+      await playlist_manager.skip(message);
     if (command === "stop") await this.stop(message);
     if (command === "queue") await this.playlist(message);
   }
 
-  async play(query: string, message: Message, voice_channel: VoiceChannel) {
-    const server_queue = this.queue.get(message.guild && message.guild.id);
-
+  async play(query: string, message: Message) {
     var song: ISong;
 
     const isYoutubeLink = ytdl.validateURL(query);
@@ -63,6 +62,8 @@ class Handler {
         artist: info.videoDetails.media.artist || info.videoDetails.author.name,
       };
 
+      playlist_manager.addSong(song, message);
+
       message.reply(`Música encontrada: ${info.videoDetails.title}`);
 
       return message.delete();
@@ -73,84 +74,6 @@ class Handler {
       const botMessage = await message.channel.send(embed);
       createInstance(results, userId, message, botMessage);
     }
-    return;
-    let search = await ytmusic.searchMusics(query);
-
-    if (!search || !search.length) {
-      console.log("Song from normal youtube");
-
-      let { items, ...rest } = await ytsr(query);
-
-      let parsed = items.map((item): MusicVideo => {
-        return {
-          youtubeId: item.id,
-          title: item.title,
-          album: "",
-          artist: item.author?.name || "",
-          duration: {
-            label: item.duration || "",
-            totalSeconds: 0,
-          },
-          thumbnailUrl: "",
-        };
-      });
-
-      search = parsed;
-    }
-
-    if (!search.length)
-      return Emitter.emit("error", { data: { channel: message.channel } });
-
-    const uri = "https://www.youtube.com/watch?v=" + search[0].youtubeId;
-
-    song = {
-      id: search[0].youtubeId || "",
-      title: search[0].title,
-      url: uri,
-      artist: search[0].artist,
-    };
-
-    return playlist_manager.addSong(song, message);
-
-    if (!server_queue) {
-      const queue_constructor = {
-        voice_channel: message.member?.voice.channel,
-        message_channel: message.channel,
-        connection: null as null | VoiceConnection,
-        songs: [] as ISong[],
-      };
-
-      this.queue.set(message.guild?.id, queue_constructor);
-      queue_constructor.songs.push(song);
-
-      try {
-        const connection = await voice_channel.join();
-        queue_constructor.connection = connection;
-
-        this.executePlay(message, queue_constructor.songs[0]);
-      } catch (error) {
-        Emitter.emit("error", {
-          message: `Não foi possível tocar ${
-            queue_constructor.songs[0].title || "uma música."
-          }`,
-          data: { channel: message.channel },
-        });
-        console.warn(error.message);
-      }
-    } else {
-      if (!server_queue.songs.length) {
-        server_queue.songs.push(song);
-        this.executePlay(message, server_queue.songs[0]);
-        return;
-      } else {
-        server_queue.songs.push(song);
-        return message.channel.send(
-          `👍 **${song.title} - ${song.artist}** adicionada a playlist!`
-        );
-      }
-    }
-
-    console.log(query, message.author.username);
   }
 
   private async executePlay(message: Message, song: ISong) {

@@ -50,7 +50,7 @@ const createInstance = (
         instance.delete(userId);
 
         try {
-          message.reply("Pesquisa cancelada");
+          message.reply("Pesquisa cancelada por exceder a espera 30 segundos.");
         } catch (error) {
           console.warn(error);
         }

@@ -1,5 +1,9 @@
 import { Message, MessageEmbed } from "discord.js";
 
+const parseSongList = (results: any[]) => {
+  return results.map((item, index) => `[${index}] ${item.title}\n`);
+};
+
 export const CreateResultsEmbed = (
   results: any,
   message: Message,
@@ -10,11 +14,7 @@ export const CreateResultsEmbed = (
     .setTitle(query)
     .setAuthor(message.author.username)
     .setTimestamp()
-    .addFields(
-      results.map((item: any, index: number) => {
-        return { name: index, value: item.title, inline: false };
-      })
-    );
+    .addField("Resultados", parseSongList(results), true);
 };
 
 export const CreateQueueEmbed = (queue: any[]) => {
@@ -22,9 +22,5 @@ export const CreateQueueEmbed = (queue: any[]) => {
     .setColor("#42fcff")
     .setTitle("Playlist")
     .setTimestamp()
-    .addFields(
-      queue.map((item: any, index: number) => {
-        return { name: index, value: item.title, inline: false };
-      })
-    );
+    .addField("", parseSongList(queue), true);
 };

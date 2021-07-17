@@ -3,10 +3,8 @@ import ytmusic from "node-youtube-music";
 import { MusicVideo } from "node-youtube-music/dist/src/models";
 
 const parseYtsr = (items: ytsr.Video[]) => {
-  console.log("*** YTSR");
-
-  return items.map((item) => {
-    const data: MusicVideo = {
+  let data = items.map((item) => {
+    let song: MusicVideo = {
       youtubeId: item.id,
       album: "",
       artist: item.author?.name,
@@ -18,15 +16,17 @@ const parseYtsr = (items: ytsr.Video[]) => {
       title: item.title,
     };
 
-    return data;
+    return song;
   });
+
+  return data.filter((data) => data.youtubeId);
 };
 
 const first = (query: string) => {
   return new Promise((resolve) => {
     ytmusic
       .searchMusics(query)
-      .then((results) => resolve(results))
+      .then((results) => resolve(results.slice(0, 10)))
       .catch((err) =>
         console.warn("*** YTM: ", err.message || "Unexpected error")
       );
@@ -44,7 +44,7 @@ const second = (query: string) => {
         throw new Error("No data");
       })
       .then((results) => parseYtsr(results))
-      .then((parsedResults) => resolve(parsedResults))
+      .then((parsedResults) => resolve(parsedResults.slice(0, 10)))
       .catch((err) =>
         console.warn("*** YTSR: ", err.message || "Unexpected error")
       );
@@ -56,7 +56,13 @@ const second = (query: string) => {
 const searchSongs = async (query: string): Promise<MusicVideo[]> => {
   return new Promise((resolve) => {
     first(query)
-      .then((data: any) => resolve(data))
+      .then((data: any) => {
+        if (data.length) {
+          resolve(data);
+        } else {
+          throw new Error("YTM: No data");
+        }
+      })
       .catch((err) => console.warn(err));
 
     second(query)

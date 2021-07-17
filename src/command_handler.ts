@@ -24,6 +24,12 @@ class Handler {
 
   async handle(command: string, parameters: string, message: Message) {
     if (command === "play") {
+      const server_queue = playlist_manager.queue.get(message.guild?.id);
+
+      if (server_queue && server_queue.connection?.dispatcher.paused) {
+        return server_queue.connection.dispatcher.resume();
+      }
+
       if (!parameters) {
         return message.reply(
           `O comando precisa de argumentos. aprenda com ${config.prefix}help`
@@ -41,10 +47,11 @@ class Handler {
       }
     }
 
+    if (command == "pause") playlist_manager.pause(message);
     if (command === "skip" || command === "fs")
       await playlist_manager.skip(message);
     if (command === "stop") await this.stop(message);
-    if (command === "queue") await this.playlist(message);
+    if (command === "queue") await playlist_manager.playlist(message);
   }
 
   async play(query: string, message: Message) {
@@ -70,6 +77,7 @@ class Handler {
     } else {
       const userId = message.author.id;
       const results = await searchSongs(query);
+      console.log(results);
       const embed = CreateResultsEmbed(results, message, query);
       const botMessage = await message.channel.send(embed);
       createInstance(results, userId, message, botMessage);

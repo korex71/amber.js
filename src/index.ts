@@ -13,7 +13,7 @@ client.on("ready", () => {
   console.log(`Logged in as ${client.user?.tag}`);
 });
 
-const commands = ["play", "skip", "fs", "stop", "queue", "pl"];
+const commands = ["play", "skip", "fs", "stop", "queue", "pl", "pause"];
 
 client.on("message", (message) => {
   if (!isNaN(Number(message.content))) {

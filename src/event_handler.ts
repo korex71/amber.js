@@ -1,23 +1,27 @@
 import Event from "events";
+import playlist_manager from "./helpers/playlist_manager";
 
 const Emitter: IEmitter = new Event();
 export interface IEmitter extends Event {
   emit(event: IEventTypes, args: IArgs): boolean;
-  on(event: IEventTypes, listener: (args: IArgs) => void): this;
+
+  on(event: IEventTypes, listener: (...args: any[]) => void): this;
 }
 
 export type IArgs = { message?: string; data?: any };
 
 export type IEventTypes =
+  | any
   | "error"
   | "log"
   | "message"
   | "search-instance"
-  | "play-song";
+  | "play-song"
+  | "update-state";
 
-Emitter.on("play-song", ({ data, message }) => {
-  const ytId = data.id;
-});
+Emitter.on("play-song", ({ data, message }) => {});
+
+Emitter.on("update-state", ({ data, message }) => {});
 
 Emitter.on("log", ({ message }) => {
   const timestamp = new Date().toLocaleString();
@@ -40,9 +44,13 @@ Emitter.on("message", ({ data, message }) => {
     console.warn(error);
   }
 });
-class EventManager {
-  constructor() {}
 
+Emitter.on("pause-song", ({ data }) => {
+  if (!data.message) return "Message data is mandatory";
+
+  playlist_manager.pause(data.message);
+});
+class EventManager extends Event {
   public send(type: IEventTypes, args: IArgs) {
     Emitter.emit(type, args);
   }

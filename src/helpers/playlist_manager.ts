@@ -6,11 +6,10 @@ import {
   VoiceChannel,
   VoiceConnection,
 } from "discord.js";
-import { MusicVideo } from "node-youtube-music/dist/src/models";
-import { Emitter } from "../event_handler";
 import { ISong } from "./ITypes";
+import { CreateQueueEmbed } from "./message_templates";
+import { Emitter } from "../event_handler";
 import ytdl from "ytdl-core-discord";
-
 interface IQueueConstructor {
   voice_channel: VoiceChannel | null | undefined;
   message_channel: TextChannel | DMChannel | NewsChannel;
@@ -98,13 +97,14 @@ class Playlist {
           type: "opus",
         })
         .on("finish", () => {
-          // const lastSong = song_queue.songs[0];
+          const lastSong = song_queue.songs[0];
           song_queue.songs.shift();
 
           if (song_queue.songs.length) {
             this.executePlay(message, song_queue.songs[0]);
           } else {
             // Call autoplay?
+            this.autoplay(message, lastSong);
           }
         });
 
@@ -129,11 +129,55 @@ class Playlist {
     server_queue.connection?.dispatcher.end();
   }
 
+  pause(message: Message) {
+    if (this.isUserOutVoiceChannel(message))
+      return message.reply(
+        "Você precisa estar conectado a um canal de voz para isso."
+      );
+
+    const server_queue = this.queue.get(message.guild?.id);
+
+    if (server_queue && server_queue.songs.length) {
+      if (!server_queue.connection?.dispatcher.paused)
+        server_queue.connection?.dispatcher.pause();
+      else message.channel.send("A música já está pausada.");
+    }
+  }
+
+  playlist(message: Message) {
+    if (this.isUserOutVoiceChannel(message))
+      return message.reply(
+        "Você precisa estar conectado a um canal de voz para isso."
+      );
+
+    const server_queue = this.queue.get(message.guild?.id);
+
+    if (server_queue && server_queue.songs.length) {
+      const embed = CreateQueueEmbed(server_queue.songs);
+
+      message.channel.send(embed);
+    }
+  }
+
+  autoplay(message: Message, lastSong: ISong) {
+    const id = `https://youtube.com/watch?v=${lastSong.id}`;
+    ytdl.getInfo(id).then((data) => {
+      let video = data.related_videos.filter((x) => !x.isLive);
+      video = video.filter((x) => x.id);
+      let song: ISong = {
+        id: video[0].id || "",
+        title: video[0].title,
+        artist: video[0].author || "",
+        url: `https://youtube.com/watch?v=${video[0].id}`,
+      };
+
+      this.addSong(song, message);
+    });
+  }
+
   isUserOutVoiceChannel(message: Message) {
     return !message.member?.voice.channel;
   }
-
-  GetNextSong() {}
 }
 
 export default new Playlist();

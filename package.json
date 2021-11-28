@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "start": "tsc & node dist/src",
-    "dev": "ts-node-dev src/"
+    "dev": "ts-node-dev src/",
+    "build": "tsc"
   },
   "dependencies": {
     "discord-player": "5.1.0",

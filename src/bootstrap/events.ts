@@ -30,20 +30,18 @@ class SetupEvents {
 
     player.on("botDisconnect", (queue: any) => {
       queue.metadata.send(
-        "Eu fui manualmente disconectado do canal de voz, limpando a playlist... ❌"
+        "Eu fui manualmente disconectado do canal de voz, limpando a playlist..."
       );
     });
 
     player.on("channelEmpty", (queue: any) => {
       queue.metadata.send(
-        "Não há mais ninguém aqui, saindo do canal de voz... ❌"
+        "Não há mais ninguém aqui, saindo do canal de voz..."
       );
     });
 
     player.on("queueEnd", (queue: any) => {
-      queue.metadata.send(
-        "Eu terminei de ler toda a playlist. até uma próxima ✅"
-      );
+      queue.metadata.send("Playlist finalizada. até uma próxima 😉");
     });
   }
 }

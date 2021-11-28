@@ -1,41 +1,75 @@
 import "dotenv/config";
-import Discord from "discord.js";
-import Command from "./command_handler";
-import { Emitter } from "./event_handler";
+import { Player } from "discord-player";
+import { Client, Intents, Collection } from "discord.js";
+import { IBootstrapConfig, IBotOptions } from "./interfaces";
+import { config as setupConfig } from "./config";
+import Loader from "./bootstrap/loader";
+import Events from "./bootstrap/events";
+import EventEmitter from "events";
 
-const client = new Discord.Client(),
-  config = {
-    token: process.env.BOT_TOKEN,
-    prefix: process.env.BOT_PREFIX || ";;",
-  };
+class Main extends EventEmitter {
+  private static BOT_TOKEN = "";
+  public BOT_PREFIX = "";
+  private BOT_DESCRIPTION = "Music bot";
 
-client.on("ready", () => {
-  console.log(`Logged in as ${client.user?.tag}`);
-});
+  public client: Client | null = null;
 
-const commands = ["play", "skip", "fs", "stop", "queue", "pl", "pause"];
+  public player: Player | null = null;
 
-client.on("message", (message) => {
-  if (!isNaN(Number(message.content))) {
-    const int = Number(message.content);
-    if (int < 0 || int > 20) return;
+  public commands = new Collection();
 
-    Emitter.emit("search-instance", {
-      data: { selected: int, userId: message.author.id },
-    });
+  constructor(config: IBootstrapConfig, options?: IBotOptions) {
+    super();
 
-    return;
+    if (!config.BOT_TOKEN || !config.BOT_PREFIX) {
+      throw new Error(
+        `Invalid config ${
+          !config.BOT_DESCRIPTION ? [config.BOT_PREFIX] : [config.BOT_TOKEN]
+        }`
+      );
+    }
+
+    Object.assign(this, config);
+
+    this.initialize();
   }
 
-  let [command, ...args] = message.content
-    .substring(config.prefix.length)
-    .split(" ");
+  initialize() {
+    const client = new Client({
+      intents: [
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.GUILD_MEMBERS,
+        Intents.FLAGS.GUILD_MESSAGES,
+        Intents.FLAGS.GUILD_VOICE_STATES,
+      ],
+    });
 
-  if (!commands.includes(command)) return;
+    this.player = new Player(client, setupConfig.discordPlayer);
 
-  Command.handle(command, args.join(" "), message);
+    Object.assign(this, {
+      client,
+    });
+
+    client.login(process.env.BOT_TOKEN).then(() => {
+      new Loader(client);
+      new Events(this.player);
+
+      this.emit("ready", (this.client, this.player, this.BOT_PREFIX));
+    });
+  }
+
+  // private static async start(client: Client) {
+  //   client = client;
+  //   this.player = new Player(client, setupConfig.discordPlayer);
+
+  //   const loader = new Loader(client, this.commands);
+
+  //   await client.login(this.BOT_TOKEN);
+  // }
+}
+
+export default new Main({
+  BOT_TOKEN: process.env.BOT_TOKEN,
+  BOT_PREFIX: process.env.BOT_PREFIX,
+  BOT_DESCRIPTION: process.env.BOT_DESCRIPTION,
 });
-
-client.login(config.token);
-
-export { client, config };

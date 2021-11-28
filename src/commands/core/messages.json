@@ -1,0 +1,11 @@
+{
+  "NO_SONG_PLAYING": "Nenhuma música tocando no momento",
+  "DISABLED_FOR_MAINTENANCE": "Opção desabilitada para manutenção",
+  "NO_HAVE_BEFORE_SONGS_TO_PLAY": "Não há música anterior para tocar",
+  "NO_HAVE_AFTER_SONGS_TO_PLAY": "Sem músicas na playlist após a atual",
+  "NO_HAVE_SONGS_TO_PLAY": "Não há música para tocar",
+  "CLEARED_PLAYLIST": "A playlist foi limpa",
+  "SPECIFY_VALID_FILTER": "Especifique um filtro válido para habilitar ou desabilitar",
+  "IT_WAS_NOT_POSSIBLE_SEND_DM": "Não foi possível te enviar a música por DM",
+  "NO_HAVE_PLAYING_SONG": ""
+}

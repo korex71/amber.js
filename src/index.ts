@@ -46,9 +46,7 @@ class Main extends EventEmitter {
 
     this.player = new Player(client, setupConfig.discordPlayer);
 
-    Object.assign(this, {
-      client,
-    });
+    this.client = client;
 
     client.login(process.env.BOT_TOKEN).then(() => {
       new Loader(client);
@@ -57,15 +55,6 @@ class Main extends EventEmitter {
       this.emit("ready", (this.client, this.player, this.BOT_PREFIX));
     });
   }
-
-  // private static async start(client: Client) {
-  //   client = client;
-  //   this.player = new Player(client, setupConfig.discordPlayer);
-
-  //   const loader = new Loader(client, this.commands);
-
-  //   await client.login(this.BOT_TOKEN);
-  // }
 }
 
 export default new Main({

@@ -1,6 +1,6 @@
 import { Player } from "discord-player";
 import { config } from "../config";
-import Amber from "../";
+// import Amber from "../";
 
 class SetupEvents {
   constructor(player: Player | null) {
